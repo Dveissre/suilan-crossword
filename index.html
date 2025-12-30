@@ -1,10 +1,980 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>TEST</title>
-  </head>
-  <body>
-    test
-  </body>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Crossword Demo</title>
+
+    <style>
+        @font-face {
+            font-family: "LXGWWenKaiMono";
+            src: url("fonts/LXGWWenKaiMono-Regular.ttf") format("truetype");
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        @font-face {
+            font-family: "LXGWWenKaiMono";
+            src: url("fonts/LXGWWenKaiMono-Medium.ttf") format("truetype");
+            font-weight: bold;
+            font-style: normal;
+        }
+
+        @font-face {
+            font-family: "SourceHanSerif";
+            src: url("fonts/SourceHanSerif-Regular.otf") format("opentype");
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        @font-face {
+            font-family: "SourceHanSerif";
+            src: url("fonts/SourceHanSerif-Bold.otf") format("opentype");
+            font-weight: bold;
+            font-style: normal;
+        }
+
+        @font-face {
+            font-family: "SourceHanSerif";
+            src: url("fonts/SourceHanSerif-Heavy.otf") format("opentype");
+            font-weight: 800;
+            font-style: normal;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'SourceHanSerif', 'Times New Roman', Times, serif;
+        }
+
+        /* 页面整体 */
+        .page {
+            display: flex;
+            flex-direction: row;
+            height: 100vh;
+        }
+
+        .title {
+            background: #000;
+            color: #fff;
+            width: 120px;
+            /* 固定一列宽度，更像“侧边栏” */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            /* 上标题 / 下日期 */
+            padding: 120px 0 20px;
+        }
+
+        /* 竖排主标题：居中偏上 */
+        .title-main {
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+            font-size: 60px;
+            font-weight: 800;
+        }
+
+        /* 底部横排小字 */
+        .title-footer {
+            font-family: 思源黑体, Consolas, sans-serif;
+            font-style: italic;
+            font-size: 20px;
+            writing-mode: horizontal-tb;
+            opacity: 0.9;
+        }
+
+        /* 中间区域：crossword */
+        .center {
+            display: flex;
+            align-items: center;
+            padding: 0 50px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(10, 50px);
+            grid-template-rows: repeat(10, 50px);
+            gap: 0;
+            border: 2px solid #000;
+        }
+
+        .cell {
+            width: 50px;
+            height: 50px;
+            border: 1px solid #000;
+            box-sizing: border-box;
+            background-color: white;
+            position: relative;
+        }
+
+        .cell.black {
+            background-color: black;
+        }
+
+        /* 编号：灰色、不可选中、在下层 */
+        .cell span {
+            color: #999;
+            user-select: none;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* 单元格里的输入 */
+        .cell input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            outline: none;
+            padding: 0;
+            margin: 0;
+            text-align: center;
+            font-size: 28px;
+            line-height: 50px;
+            background: transparent;
+            z-index: 1;
+            position: relative;
+            box-sizing: border-box;
+
+            font-weight: bold;
+            font-family: "LXGWWenKaiMono", monospace;
+        }
+
+        /* 当前高亮格 */
+        .cell.active {
+            background: #fff4b0;
+            /* 浅黄色 */
+        }
+
+        /* 当前格编号高亮 */
+        .cell.active span {
+            color: #99721f;
+            font-weight: bold;
+        }
+
+        /* 右侧线索 */
+        .clues {
+            flex: 1;
+            padding: 15px 15px;
+            overflow-y: auto;
+
+            font-family: "LXGWWenKaiMono", monospace;
+            font-size: 17px;
+            line-height: 1.45;
+        }
+
+        /* 每条线索分为三栏 */
+        .clue-row {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            margin: 6px 0;
+        }
+
+        .clue-pre {
+            flex: 0 0 45%;
+            text-align: left;
+        }
+
+        .clue-hint {
+            flex: 0 0 25%;
+            text-align: left;
+            min-height: 1.2em;
+        }
+
+        .clue-hint .hint-text {
+            display: none;
+        }
+
+        .unlock-btn {
+            background: black;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: "LXGWWenKaiMono", monospace;
+            border-radius: 4px;
+        }
+
+        .unlock-btn.small {
+            padding: 3px 8px;
+            font-size: 14px;
+        }
+
+        .unlock-btn.disabled {
+            background: #bbb;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .status {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            font-family: Consolas, monospace;
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        #pauseBtn,
+        #resetBtn {
+            height: 26px;
+            padding: 0 10px;
+            background: black;
+            cursor: pointer;
+            font-family: "LXGWWenKaiMono", monospace;
+            color: white;
+            font-size: 16px;
+
+            appearance: none;
+            -webkit-appearance: none;
+            border: none;
+            box-shadow: none;
+            outline: none;
+        }
+
+        #pauseBtn:hover,
+        #resetBtn:hover {
+            background: #777;
+        }
+
+        #startBtn {
+            margin-top: 15px;
+            width: 160px;
+            height: 36px;
+            background: black;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-family: 'SourceHanSerif';
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        /* START 状态悬停变灰（仅在未开始时） */
+        #startBtn:not(.started):hover {
+            background: #777;
+        }
+
+        #startBtn.started {
+            background: #328;
+        }
+
+        #metaAnswer {
+            margin-top: 30px;
+            width: 200px;
+            height: 36px;
+            border: 2px solid black;
+            text-align: center;
+            font-family: "LXGWWenKaiMono", monospace;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        #metaAnswer::placeholder {
+            color: #999;
+        }
+
+        #startBtn.success {
+            background: #2e8b57;
+            /* 绿色 */
+            color: white;
+        }
+
+        @keyframes flashRed {
+            0% {
+                background: #b22222;
+            }
+
+            100% {
+                background: #328;
+            }
+        }
+
+        #startBtn.error {
+            animation: flashRed 0.3s ease;
+        }
+
+        #helpBtn {
+            margin-top: 15px;
+            width: 36px;
+            height: 36px;
+            font-size: 18px;
+            border: 2px solid black;
+            background: white;
+            cursor: pointer;
+        }
+
+        #overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #modal {
+            background: white;
+            padding: 20px;
+            width: 300px;
+            border: 2px solid black;
+            font-family: "LXGWWenKaiMono", monospace;
+            font-size: 20px;
+            text-align: center;
+        }
+
+        #closeModal {
+            margin-top: 15px;
+            padding: 6px 16px;
+
+            background: black;
+            color: white;
+
+            appearance: none;
+            -webkit-appearance: none;
+            border: none;
+            box-shadow: none;
+            outline: none;
+
+            font-family: "LXGWWenKaiMono", monospace;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        #closeModal:hover {
+            background: #777;
+        }
+
+        /* 小提示（当 HP 不足时闪烁提示） */
+        .hp-flash {
+            animation: hpFlash 0.4s ease;
+        }
+
+        @keyframes hpFlash {
+            0% {
+                color: #b22222;
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                color: inherit;
+                transform: scale(1);
+            }
+        }
+
+        #mobile-only {
+            display: none;
+            height: 100vh;
+            font-size: 22px;
+            text-align: center;
+        }
+
+        /* 手机端 / 窄屏 */
+        @media (max-width: 900px) {
+            #desktop-only {
+                display: none;
+            }
+
+            #mobile-only {
+                display: flex;
+                flex-direction: column;
+                /* ← 关键 */
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                /* 可选：行距 */
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="desktop-only">
+        <div class="page">
+
+            <!-- 左侧标题 -->
+            <div class="title">
+                <div class="title-main">
+                    随蓝·纵横
+                </div>
+                <div class="title-footer">
+                    by fukurei
+                </div>
+            </div>
+
+            <!-- 中间 crossword -->
+            <div class="center">
+                <div class="panel">
+                    <div class="status">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div id="timer">00:00</div>
+                            <button id="pauseBtn">暂停</button>
+                            <button id="resetBtn">重置</button>
+                        </div>
+                        <div id="hp">HP: 00</div>
+                    </div>
+
+
+                    <div class="grid"></div>
+
+                    <input id="metaAnswer" placeholder="META ANSWER">
+
+                    <div style="display:flex;gap:10px;align-items:center;margin-top:10px;">
+                        <button id="startBtn">START</button>
+                        <button id="helpBtn">?</button>
+                    </div>
+
+                    <div id="result" style="margin-top:10px;font-size:18px;"> </div>
+
+                    <div id="overlay">
+                        <div id="modal">
+                            <p>提示点数 (HP) 每30秒将回复一点</p>
+                            <p>消耗提示点数以逐步解锁后续线索</p>
+                            <p>本题有一个元答案 (Meta Answer)</p>
+                            <p>除此之外不会对中间答案进行验证</p>
+                            <button id="closeModal">关闭</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+
+            <!-- 右侧线索（由 JS 生成为三段式） -->
+            <div class="clues"></div>
+
+        </div>
+
+        <script>
+            // 1 = 黑格，0 = 白格
+            const layout = [
+                [{ number: "D" }, 0, 1, { number: "J" }, 1, { number: "Y" }, 1, { number: "Z" }, 0, 0],
+                [0, 1, 1, { number: "H" }, 0, 0, 0, 0, 1, 1],
+                [{ number: "X" }, 0, { number: "J" }, 0, 1, 1, 1, { number: "W" }, { number: "S" }, 0],
+                [1, 1, 0, 1, { number: "H" }, 0, { number: "F" }, 1, 0, 1],
+                [{ number: "F" }, 0, 0, 1, 0, 1, 0, 1, 0, 1],
+                [0, 1, 1, { number: "B" }, 0, 1, { number: "H" }, 0, 0, 0],
+                [{ number: "Q" }, { number: "S" }, 0, 1, 1, { number: "Q" }, 1, 1, 1, 1],
+                [1, 0, 1, { number: "X" }, 0, 0, 1, { number: "Z" }, 1, { number: "C" }],
+                [1, 0, 1, 1, 1, { number: "Q" }, 0, 0, 1, 0],
+                [1, { number: "F" }, 0, 0, 0, 0, 1, { number: "J" }, 0, 0],
+            ];
+
+            const grid = document.querySelector('.grid');
+
+            layout.forEach(row => {
+                row.forEach(cellData => {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+
+                    // 黑格
+                    if (cellData === 1) {
+                        cell.classList.add('black');
+                    }
+
+                    // 白格（包括带编号和不带编号）
+                    if (cellData !== 1) {
+                        // 编号（若有）
+                        if (typeof cellData === 'object') {
+                            const number = document.createElement('span');
+                            number.textContent = cellData.number;
+                            number.style.position = 'absolute';
+                            number.style.left = '2px';
+                            number.style.top = '-6px';
+                            number.style.fontSize = '20px';
+
+                            cell.appendChild(number);
+                        }
+
+                        // 输入框
+                        const input = document.createElement('input');
+                        input.maxLength = 1;     // 每格一个字符
+                        input.autocomplete = 'off';
+                        cell.appendChild(input);
+                    }
+
+                    grid.appendChild(cell);
+                });
+            });
+
+            grid.addEventListener('focusin', (e) => {
+                const cell = e.target.closest('.cell');
+                if (!cell) return;
+                cell.classList.add('active');
+            });
+
+            grid.addEventListener('focusout', (e) => {
+                const cell = e.target.closest('.cell');
+                if (!cell) return;
+                cell.classList.remove('active');
+            });
+
+            grid.addEventListener('input', saveProgress);
+
+            // --- 控件与状态 ---
+            const startBtn = document.getElementById('startBtn');
+            const timerEl = document.getElementById('timer');
+            const hpEl = document.getElementById('hp');
+            const inputEl = document.getElementById('metaAnswer');
+            const resultEl = document.getElementById('result');
+
+            let seconds = 0;
+            let hp = 0;        // 当前可用 HP
+            let hpUsed = 0;    // HP 已消耗（用于最终结果显示）
+            let timerId = null;
+            let started = false;
+            let paused = false;
+            let solved = false;
+
+            const CORRECT_ANSWER = "ANSWER";
+            const pauseBtn = document.getElementById('pauseBtn');
+            const resetBtn = document.getElementById('resetBtn');
+
+            function updateTimer() {
+                seconds++;
+                const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
+                const ss = String(seconds % 60).padStart(2, '0');
+                timerEl.textContent = `${mm}:${ss}`;
+
+                if (seconds % 2 === 0) {
+                    hp++;
+                    hpEl.textContent = `HP: ${String(hp).padStart(2, '0')}`;
+                }
+
+                saveProgress();
+            }
+
+            pauseBtn.addEventListener('click', () => {
+                if (!started) return;
+
+                if (!paused) {
+                    clearInterval(timerId);
+                    paused = true;
+                    pauseBtn.textContent = "继续";
+                } else {
+                    timerId = setInterval(updateTimer, 1000);
+                    paused = false;
+                    pauseBtn.textContent = "暂停";
+                }
+                saveProgress();
+            });
+
+            resetBtn.addEventListener('click', () => {
+                clearInterval(timerId);
+                localStorage.removeItem(STORAGE_KEY);
+                location.reload();
+            });
+
+            function checkAnswer() {
+                if (inputEl.value.trim().toUpperCase() === CORRECT_ANSWER) {
+                    clearInterval(timerId);
+
+                    solved = true;
+
+                    startBtn.classList.add('success');
+                    startBtn.textContent = "CONGRATS";
+
+                    const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
+                    const ss = String(seconds % 60).padStart(2, '0');
+
+                    resultEl.innerHTML =
+                        `<b>恭喜你回答正确！</b><br>` +
+                        `用时：${mm} 分 ${ss} 秒<br>消耗HP：${hpUsed}`;
+
+                    saveProgress();
+
+                } else {
+                    // ❌ 错误动画
+                    startBtn.classList.add('error');
+                    setTimeout(() => startBtn.classList.remove('error'), 300);
+
+                }
+            }
+
+            startBtn.addEventListener('click', () => {
+                if (!started) {
+                    // 第一次点击：START → SUBMIT
+                    started = true;
+                    startBtn.textContent = "SUBMIT";
+                    startBtn.classList.add('started');
+
+                    timerId = setInterval(updateTimer, 1000);
+                } else {
+                    // 已开始：SUBMIT → 校验答案
+                    checkAnswer();
+                }
+            });
+
+            // 按回车提交（修正：使用 e.key）
+            inputEl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && started) {
+                    e.preventDefault();
+                    checkAnswer();
+                }
+            });
+
+            // Help modal
+            const helpBtn = document.getElementById('helpBtn');
+            const overlay = document.getElementById('overlay');
+            const closeModal = document.getElementById('closeModal');
+
+            helpBtn.addEventListener('click', () => {
+                overlay.style.display = 'flex';
+            });
+
+            closeModal.addEventListener('click', () => {
+                overlay.style.display = 'none';
+            });
+
+            // --- 线索与解锁逻辑 ---
+            const cluesContainer = document.querySelector('.clues');
+
+            // 这是示例数据：每条包含预设、提示A、提示B（你可以替换为真实文本）
+            const cluesData = [
+                [
+                    "【B2】看起来或听起来是说用英语向旧岁告别，",
+                    "实际上也不无这层意思，",
+                    "是我国新春的主要习俗。"
+                ],
+                [
+                    "【B3】看起来是十张纸写两个中文重复五十次，",
+                    "实际上是一词牌名别称，",
+                    "其代表作的作者为苏轼。"
+                ],
+                [
+                    "【C3】倒着看，是要让苍穹浴火、令云霄俱焚，",
+                    "实际上是一种神学形象，",
+                    "其居于天使的最高位阶。"
+                ],
+                [
+                    "【D2】看起来是Windows+↑组合快捷键的功能，",
+                    "实际上是一个君主年号，",
+                    "也是日本第一个公年号。"
+                ],
+                [
+                    "【D3】看起来指云梦泽或贝加尔湖等的正中央，",
+                    "实际上是一位动画监督，",
+                    "以其“暴死光环”而闻名。"
+                ],
+                [
+                    "【F3】看起来在说波旁王朝时期钱币上的路易，",
+                    "实际上是名德国军事家，",
+                    "是凡尔登战役的发起者。"
+                ],
+                [
+                    "【F3】看起来是把一根绳索拆成若干纤维细丝，",
+                    "实际上既是一数学名词，",
+                    "也指考试最低录取门槛。"
+                ],
+                [
+                    "【F3】看起来是有不同职能的附属小型聊天组，",
+                    "实际上有关白细胞谱系，",
+                    "又称作白细胞分化抗原。"
+                ],
+                [
+                    "【F5】看起来是说刚刚拯救了每个独立的宇宙，",
+                    "实际上是一名梵蒂冈人，",
+                    "是上一任天主教会教宗。"
+                ],
+                [
+                    "【H3】看起来如1997之于香港、1999之于澳门，",
+                    "实际上是一个历法概念，",
+                    "也称作太阳年或者岁实。"
+                ],
+                [
+                    "【H3】看起来是穆斯林在追索教义律条之本源，",
+                    "实际上是一种搜索算法，",
+                    "本质上是深度优先搜索。"
+                ],
+                [
+                    "【H4】看起来形容男子在中考前的年级很优秀，",
+                    "实际上是三名历史功臣，",
+                    "包括张良、韩信、萧何。"
+                ],
+                [
+                    "【H5】看起来是《绝命毒师》主角在称量溶剂，",
+                    "实际上是一个酒类品牌，",
+                    "是河北特产的非遗白酒。"
+                ],
+                [
+                    "【J3】倒着看，是宋辽夏维持和好的原因之一，",
+                    "实际上是一个计量系统，",
+                    "用于测量贵金属的重量。"
+                ],
+                [
+                    "【J3】看起来是对电脑中连接传输配件作整理，",
+                    "实际上是一种铁道类型，",
+                    "专用于列车转场或折返。"
+                ],
+                [
+                    "【J3】看起来是描述正在减省电力资源的耗用，",
+                    "实际上是一个古代官职，",
+                    "是受有旌节的军事将领。"
+                ],
+                [
+                    "【Q3】看起来是说讨论组正飞快转动脑筋思考，",
+                    "实际上有关于振动与波，",
+                    "刻画了波包传播的快慢。"
+                ],
+                [
+                    "【Q3】看起来是一棵圣诞杉只有正面挂了装饰，",
+                    "实际上是一种数据结构，",
+                    "可用于存储检索字符串。"
+                ],
+                [
+                    "【Q4】看起来指530万—260万年前的地质时代，",
+                    "实际上是一首日语歌曲，",
+                    "为某新海诚电影主题曲。"
+                ],
+                [
+                    "【S4】看起来是处死耶稣与左右两强盗的刑具，",
+                    "实际上是一颗南天亮星，",
+                    "亮度于全天排名第20位。"
+                ],
+                [
+                    "【S4】看起来在请求快来祓除拯救闹鬼的地带，",
+                    "实际上是一项竞赛项目，",
+                    "需以最短时间还原魔方。"
+                ],
+                [
+                    "【W3】看起来这么多响叮当的乐器一定会很吵，",
+                    "实际上是一家载具厂商，",
+                    "主要生产货车、巴士等。"
+                ],
+                [
+                    "【X3】看起来是形容从后面慢吞吞地一路进发，",
+                    "实际上是我国的军事家，",
+                    "为新中国十大元帅之一。"
+                ],
+                [
+                    "【X4】看起来是说自动体外除颤器的生产加工，",
+                    "实际上是网络通信技术，",
+                    "通过定期发包确认在线。"
+                ],
+                [
+                    "【Y2】看起来是说这颗卫星的年龄已经很大了，",
+                    "实际上是一个社会职业，",
+                    "以传说人物来指代媒人。"
+                ],
+                [
+                    "【Z3】看起来是独酌时一个人饮尽了若干杯酒，",
+                    "实际上曾是一网络热词，",
+                    "指自发弘扬爱国的群体。"
+                ],
+                [
+                    "【Z3】看起来形容雌雄同株、同花授粉的植物，",
+                    "实际上是一传播学名词，",
+                    "是平民化的网络新媒体。"
+                ],
+                [
+                    "【Z3】看起来是说曹操之子建立了崇高的操守，",
+                    "实际上是一个主题节日，",
+                    "设于每年的三月十二日。"
+                ]
+            ];
+
+            // cost for A and B
+            const COST_A = 1;
+            const COST_B = 5;
+
+            // 生成每条线索的 DOM
+            cluesData.forEach((parts, idx) => {
+                const row = document.createElement('div');
+                row.className = 'clue-row';
+
+                const pre = document.createElement('div');
+                pre.className = 'clue-pre';
+                pre.textContent = parts[0];
+
+                const hintA = document.createElement('div');
+                hintA.className = 'clue-hint';
+                // unlock 按钮（A）
+                const btnA = document.createElement('button');
+                btnA.className = 'unlock-btn small';
+                btnA.textContent = `${COST_A} HP 解锁`;
+                btnA.dataset.cost = COST_A;
+                btnA.dataset.clueIndex = idx;
+                btnA.dataset.hintType = 'A';
+                // hint 文本（初始隐藏）
+                const hintAText = document.createElement('span');
+                hintAText.className = 'hint-text';
+                hintAText.textContent = parts[1];
+
+                hintA.appendChild(btnA);
+                hintA.appendChild(hintAText);
+
+                const hintB = document.createElement('div');
+                hintB.className = 'clue-hint';
+                const btnB = document.createElement('button');
+                btnB.className = 'unlock-btn small';
+                btnB.textContent = `${COST_B} HP 解锁`;
+                btnB.dataset.cost = COST_B;
+                btnB.dataset.clueIndex = idx;
+                btnB.dataset.hintType = 'B';
+                btnB.classList.add('disabled');
+                const hintBText = document.createElement('span');
+                hintBText.className = 'hint-text';
+                hintBText.textContent = parts[2];
+
+                hintB.appendChild(btnB);
+                hintB.appendChild(hintBText);
+
+                row.appendChild(pre);
+                row.appendChild(hintA);
+                row.appendChild(hintB);
+
+                cluesContainer.appendChild(row);
+            });
+
+            // 统一事件代理，处理解锁点击
+            cluesContainer.addEventListener('click', (e) => {
+                const btn = e.target.closest('.unlock-btn');
+                if (!btn) return;
+
+                const cost = Number(btn.dataset.cost) || 0;
+                const type = btn.dataset.hintType;
+                const clueIndex = Number(btn.dataset.clueIndex);
+
+                // 若是 B 提示，但 A 尚未解锁，则不可点击
+                if (type === 'B' && btn.classList.contains('disabled')) {
+                    return;
+                }
+
+                if (hp < cost) {
+                    // HP 不足：短暂提示 HP 元素
+                    hpEl.classList.add('hp-flash');
+                    setTimeout(() => hpEl.classList.remove('hp-flash'), 400);
+                    return;
+                }
+
+                // 扣除 HP，并记录消耗
+                hp -= cost;
+                hpUsed += cost;
+                hpEl.textContent = `HP: ${String(hp).padStart(2, '0')}`;
+
+                // 显示提示文本、移除按钮
+                const parent = btn.parentElement;
+                const hintText = parent.querySelector('.hint-text');
+                if (hintText) {
+                    hintText.style.display = 'inline';
+                }
+                btn.remove();
+                // 如果解锁的是 A，则启用同一行的 B
+                if (type === 'A') {
+                    const row = parent.parentElement;
+                    const btnB = row.querySelector('.unlock-btn[data-hint-type="B"]');
+                    if (btnB) {
+                        btnB.classList.remove('disabled');
+                    }
+                }
+
+                saveProgress();
+
+            });
+
+            const STORAGE_KEY = 'crossword-progress';
+
+            function saveProgress() {
+                const cells = Array.from(document.querySelectorAll('.cell input'))
+                    .map(input => input.value || '');
+
+                const unlocked = {};
+                document.querySelectorAll('.hint-text').forEach((el, i) => {
+                    if (el.style.display === 'inline') {
+                        unlocked[i] = true;
+                    }
+                });
+
+                const data = {
+                    cells,
+                    seconds,
+                    hp,
+                    hpUsed,
+                    started,
+                    solved,     // ← 新增
+                    unlocked
+                };
+
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            }
+
+            function loadProgress() {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return;
+
+                const data = JSON.parse(raw);
+
+                seconds = data.seconds || 0;
+                hp = data.hp || 0;
+                hpUsed = data.hpUsed || 0;
+                started = data.started || false;
+                solved = data.solved || false;
+
+                timerEl.textContent =
+                    `${String(Math.floor(seconds / 60)).padStart(2, '0')}:` +
+                    `${String(seconds % 60).padStart(2, '0')}`;
+
+                hpEl.textContent = `HP: ${String(hp).padStart(2, '0')}`;
+
+                // 恢复填写内容
+                const inputs = document.querySelectorAll('.cell input');
+                inputs.forEach((input, i) => {
+                    if (data.cells && data.cells[i]) {
+                        input.value = data.cells[i];
+                    }
+                });
+
+                // 恢复解锁状态
+                Object.keys(data.unlocked || {}).forEach(i => {
+                    const hint = document.querySelectorAll('.hint-text')[i];
+                    if (hint) {
+                        hint.style.display = 'inline';
+                        const btn = hint.previousElementSibling;
+                        if (btn) btn.remove();
+                    }
+                });
+
+                // 若已开始，恢复计时
+                if (started) {
+                    startBtn.textContent = "SUBMIT";
+                    startBtn.classList.add('started');
+                    timerId = setInterval(updateTimer, 1000);
+                }
+
+                if (solved) {
+                    clearInterval(timerId);
+                    startBtn.classList.add('success');
+                    startBtn.textContent = "CONGRATS";
+
+                    const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
+                    const ss = String(seconds % 60).padStart(2, '0');
+
+                    resultEl.innerHTML =
+                        `<b>恭喜你回答正确！</b><br>` +
+                        `用时：${mm} 分 ${ss} 秒<br>消耗HP：${hpUsed}`;
+                }
+
+            }
+
+            loadProgress();
+        </script>
+    </div>
+
+    <div id="mobile-only">
+        <div style="font-size:44px;">Sorry！</div>
+        <div>请用电脑端或最大化窗口访问该页面。</div>
+    </div>
+</body>
+
 </html>

@@ -381,7 +381,8 @@
         }
 
         /* 手机端 / 窄屏 */
-        @media (max-width: 900px) {
+        @media (hover: none) and (pointer: coarse),
+        (max-aspect-ratio: 4/3) {
             #desktop-only {
                 display: none;
             }
@@ -389,11 +390,9 @@
             #mobile-only {
                 display: flex;
                 flex-direction: column;
-                /* ← 关键 */
                 align-items: center;
                 justify-content: center;
                 gap: 10px;
-                /* 可选：行距 */
             }
         }
     </style>

@@ -546,7 +546,7 @@
                 const ss = String(seconds % 60).padStart(2, '0');
                 timerEl.textContent = `${mm}:${ss}`;
 
-                if (seconds % 2 === 0) {
+                if (seconds % 30 === 0) {
                     hp++;
                     hpEl.textContent = `HP: ${String(hp).padStart(2, '0')}`;
                 }

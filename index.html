@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Crossword Demo</title>
+    <title>Suilan Crossword</title>
 
     <style>
         @font-face {
@@ -376,13 +376,12 @@
         #mobile-only {
             display: none;
             height: 100vh;
-            font-size: 22px;
+            font-size: 30px;
             text-align: center;
         }
 
         /* 手机端 / 窄屏 */
-        @media (hover: none) and (pointer: coarse),
-        (max-aspect-ratio: 4/3) {
+        @media (max-aspect-ratio: 4/3) {
             #desktop-only {
                 display: none;
             }
@@ -402,7 +401,6 @@
     <div id="desktop-only">
         <div class="page">
 
-            <!-- 左侧标题 -->
             <div class="title">
                 <div class="title-main">
                     随蓝·纵横
@@ -412,7 +410,6 @@
                 </div>
             </div>
 
-            <!-- 中间 crossword -->
             <div class="center">
                 <div class="panel">
                     <div class="status">
@@ -449,8 +446,6 @@
                 </div>
             </div>
 
-
-            <!-- 右侧线索（由 JS 生成为三段式） -->
             <div class="clues"></div>
 
         </div>
@@ -536,7 +531,7 @@
             let paused = false;
             let solved = false;
 
-            const CORRECT_ANSWER = "ANSWER";
+            const CORRECT_ANSWER = "大年初一";
             const pauseBtn = document.getElementById('pauseBtn');
             const resetBtn = document.getElementById('resetBtn');
 
@@ -971,7 +966,7 @@
     </div>
 
     <div id="mobile-only">
-        <div style="font-size:44px;">Sorry！</div>
+        <div style="font-size:80px;">Sorry！</div>
         <div>请用电脑端或最大化窗口访问该页面。</div>
     </div>
 </body>

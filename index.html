@@ -531,9 +531,21 @@
             let paused = false;
             let solved = false;
 
-            const CORRECT_ANSWER = "大年初一";
+            const CORRECT_HASH = "9b844e0759d9f8bf73271cfde7a2d06e0cb8fbbd3f349edc05a6adeb5b2a43fe";
+            const MILESTONE_HASH = "530ffbe073a2c447d1b3e05b0a18c4b51a33d55be897dcc61013023eba1240e5";
+
             const pauseBtn = document.getElementById('pauseBtn');
             const resetBtn = document.getElementById('resetBtn');
+
+            async function sha256(str) {
+                const buf = await crypto.subtle.digest(
+                    "SHA-256",
+                    new TextEncoder().encode(str)
+                );
+                return Array.from(new Uint8Array(buf))
+                    .map(b => b.toString(16).padStart(2, "0"))
+                    .join("");
+            }
 
             function updateTimer() {
                 seconds++;
@@ -570,8 +582,12 @@
                 location.reload();
             });
 
-            function checkAnswer() {
-                if (inputEl.value.trim().toUpperCase() === CORRECT_ANSWER) {
+            async function checkAnswer() {
+                const value = inputEl.value.trim();
+                const hash = await sha256(value);
+
+                // 🎯 最终答案（优先级最高）
+                if (hash === CORRECT_HASH) {
                     clearInterval(timerId);
 
                     solved = true;
@@ -587,16 +603,25 @@
                         `用时：${mm} 分 ${ss} 秒<br>消耗HP：${hpUsed}`;
 
                     saveProgress();
-
-                } else {
-                    // ❌ 错误动画
-                    startBtn.classList.add('error');
-                    setTimeout(() => startBtn.classList.remove('error'), 300);
+                    return;
 
                 }
+
+                // 🪄 里程碑答案（仅在未最终通关时触发）
+                if (!solved && hash === MILESTONE_HASH) {
+
+                    resultEl.innerHTML = "你发现了一个里程碑！";
+                    saveProgress();
+                    return;
+                }
+
+                // ❌ 其他错误
+                startBtn.classList.add('error');
+                setTimeout(() => startBtn.classList.remove('error'), 300);
+
             }
 
-            startBtn.addEventListener('click', () => {
+            startBtn.addEventListener('click', async () => {
                 if (!started) {
                     // 第一次点击：START → SUBMIT
                     started = true;
@@ -611,7 +636,7 @@
             });
 
             // 按回车提交（修正：使用 e.key）
-            inputEl.addEventListener('keydown', (e) => {
+            inputEl.addEventListener('keydown', async (e) => {
                 if (e.key === 'Enter' && started) {
                     e.preventDefault();
                     checkAnswer();
@@ -634,148 +659,152 @@
             // --- 线索与解锁逻辑 ---
             const cluesContainer = document.querySelector('.clues');
 
+            function decodeBase64(str) {
+                return decodeURIComponent(escape(atob(str)));
+            }
+
             // 这是示例数据：每条包含预设、提示A、提示B（你可以替换为真实文本）
             const cluesData = [
                 [
-                    "【B2】看起来或听起来是说用英语向旧岁告别，",
-                    "实际上也不无这层意思，",
-                    "是我国新春的主要习俗。"
+                    decodeBase64("44CQQjLjgJHnnIvotbfmnaXmiJblkKzotbfmnaXmmK/or7TnlKjoi7Hor63lkJHml6flsoHlkYrliKvvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5Lmf5LiN5peg6L+Z5bGC5oSP5oCd77yM"),
+                    decodeBase64("5piv5oiR5Zu95paw5pil55qE5Li76KaB5Lmg5L+X44CC"),
                 ],
                 [
-                    "【B3】看起来是十张纸写两个中文重复五十次，",
-                    "实际上是一词牌名别称，",
-                    "其代表作的作者为苏轼。"
+                    decodeBase64("44CQQjPjgJHnnIvotbfmnaXmmK/ljYHlvKDnurjlhpnkuKTkuKrkuK3mlofph43lpI3kupTljYHmrKHvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5piv5LiA6K+N54mM5ZCN5Yir56ew77yM"),
+                    decodeBase64("5YW25Luj6KGo5L2c55qE5L2c6ICF5Li66IuP6L2844CC"),
                 ],
                 [
-                    "【C3】倒着看，是要让苍穹浴火、令云霄俱焚，",
-                    "实际上是一种神学形象，",
-                    "其居于天使的最高位阶。"
+                    decodeBase64("44CQQzPjgJHlgJLnnYDnnIvvvIzmmK/opoHorqnoi43nqbnmtbTngavjgIHku6TkupHpnITkv7HnhJrvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5piv5LiA56eN56We5a2m5b2i6LGh77yM"),
+                    decodeBase64("5YW25bGF5LqO5aSp5L2/55qE5pyA6auY5L2N6Zi244CC"),
                 ],
                 [
-                    "【D2】看起来是Windows+↑组合快捷键的功能，",
-                    "实际上是一个君主年号，",
-                    "也是日本第一个公年号。"
+                    decodeBase64("44CQRDLjgJHnnIvotbfmnaXmmK9XaW5kb3dzK+KGkee7hOWQiOW/q+aNt+mUrueahOWKn+iDve+8jA=="),
+                    decodeBase64("5a6e6ZmF5LiK5piv5LiA5Liq5ZCb5Li75bm05Y+377yM"),
+                    decodeBase64("5Lmf5piv5pel5pys56ys5LiA5Liq5YWs5bm05Y+344CC"),
                 ],
                 [
-                    "【D3】看起来指云梦泽或贝加尔湖等的正中央，",
-                    "实际上是一位动画监督，",
-                    "以其“暴死光环”而闻名。"
+                    decodeBase64("44CQRDPjgJHnnIvotbfmnaXmjIfkupHmoqbms73miJbotJ3liqDlsJTmuZbnrYnnmoTmraPkuK3lpK7vvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5piv5LiA5L2N5Yqo55S755uR552j77yM"),
+                    decodeBase64("5Lul5YW24oCc5pq05q275YWJ546v4oCd6ICM6Ze75ZCN44CC"),
                 ],
                 [
-                    "【F3】看起来在说波旁王朝时期钱币上的路易，",
-                    "实际上是名德国军事家，",
-                    "是凡尔登战役的发起者。"
+                    decodeBase64("44CQRjPjgJHnnIvotbfmnaXlnKjor7Tms6Lml4HnjovmnJ3ml7bmnJ/pkrHluIHkuIrnmoTot6/mmJPvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5piv5ZCN5b635Zu95Yab5LqL5a6277yM"),
+                    decodeBase64("5piv5Yeh5bCU55m75oiY5b2555qE5Y+R6LW36ICF44CC"),
                 ],
                 [
-                    "【F3】看起来是把一根绳索拆成若干纤维细丝，",
-                    "实际上既是一数学名词，",
-                    "也指考试最低录取门槛。"
+                    decodeBase64("44CQRjPjgJHnnIvotbfmnaXmmK/miorkuIDmoLnnu7PntKLmi4bmiJDoi6XlubLnuqTnu7Tnu4bkuJ3vvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5pei5piv5LiA5pWw5a2m5ZCN6K+N77yM"),
+                    decodeBase64("5Lmf5oyH6ICD6K+V5pyA5L2O5b2V5Y+W6Zeo5qeb44CC"),
                 ],
                 [
-                    "【F3】看起来是有不同职能的附属小型聊天组，",
-                    "实际上有关白细胞谱系，",
-                    "又称作白细胞分化抗原。"
+                    decodeBase64("44CQRjPjgJHnnIvotbfmnaXmmK/mnInkuI3lkIzogYzog73nmoTpmYTlsZ7lsI/lnovogYrlpKnnu4TvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5pyJ5YWz55m957uG6IOe6LCx57O777yM"),
+                    decodeBase64("5Y+I56ew5L2c55m957uG6IOe5YiG5YyW5oqX5Y6f44CC"),
                 ],
                 [
-                    "【F5】看起来是说刚刚拯救了每个独立的宇宙，",
-                    "实际上是一名梵蒂冈人，",
-                    "是上一任天主教会教宗。"
+                    decodeBase64("44CQRjXjgJHnnIvotbfmnaXmmK/or7TliJrliJrmi6/mlZHkuobmr4/kuKrni6znq4vnmoTlroflrpnvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5piv5LiA5ZCN5qK16JKC5YaI5Lq677yM"),
+                    decodeBase64("5piv5LiK5LiA5Lu75aSp5Li75pWZ5Lya5pWZ5a6X44CC"),
                 ],
                 [
-                    "【H3】看起来如1997之于香港、1999之于澳门，",
-                    "实际上是一个历法概念，",
-                    "也称作太阳年或者岁实。"
+                    decodeBase64("44CQSDPjgJHnnIvotbfmnaXlpoIxOTk35LmL5LqO6aaZ5riv44CBMTk5OeS5i+S6jua+s+mXqO+8jA=="),
+                    decodeBase64("5a6e6ZmF5LiK5piv5LiA5Liq5Y6G5rOV5qaC5b+177yM"),
+                    decodeBase64("5Lmf56ew5L2c5aSq6Ziz5bm05oiW6ICF5bKB5a6e44CC"),
                 ],
                 [
-                    "【H3】看起来是穆斯林在追索教义律条之本源，",
-                    "实际上是一种搜索算法，",
-                    "本质上是深度优先搜索。"
+                    decodeBase64("44CQSDPjgJHnnIvotbfmnaXmmK/nqYbmlq/mnpflnKjov73ntKLmlZnkuYnlvovmnaHkuYvmnKzmupDvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5piv5LiA56eN5pCc57Si566X5rOV77yM"),
+                    decodeBase64("5pys6LSo5LiK5piv5rex5bqm5LyY5YWI5pCc57Si44CC"),
                 ],
                 [
-                    "【H4】看起来形容男子在中考前的年级很优秀，",
-                    "实际上是三名历史功臣，",
-                    "包括张良、韩信、萧何。"
+                    decodeBase64("44CQSDTjgJHnnIvotbfmnaXlvaLlrrnnlLflrZDlnKjkuK3ogIPliY3nmoTlubTnuqflvojkvJjnp4DvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5piv5LiJ5ZCN5Y6G5Y+y5Yqf6Iej77yM"),
+                    decodeBase64("5YyF5ous5byg6Imv44CB6Z+p5L+h44CB6JCn5L2V44CC"),
                 ],
                 [
-                    "【H5】看起来是《绝命毒师》主角在称量溶剂，",
-                    "实际上是一个酒类品牌，",
-                    "是河北特产的非遗白酒。"
+                    decodeBase64("44CQSDXjgJHnnIvotbfmnaXmmK/jgIrnu53lkb3mr5LluIjjgIvkuLvop5LlnKjnp7Dph4/murbliYLvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5piv5LiA5Liq6YWS57G75ZOB54mM77yM"),
+                    decodeBase64("5piv5rKz5YyX54m55Lqn55qE6Z2e6YGX55m96YWS44CC"),
                 ],
                 [
-                    "【J3】倒着看，是宋辽夏维持和好的原因之一，",
-                    "实际上是一个计量系统，",
-                    "用于测量贵金属的重量。"
+                    decodeBase64("44CQSjPjgJHlgJLnnYDnnIvvvIzmmK/lrovovr3lpI/nu7TmjIHlkozlpb3nmoTljp/lm6DkuYvkuIDvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5piv5LiA5Liq6K6h6YeP57O757uf77yM"),
+                    decodeBase64("55So5LqO5rWL6YeP6LS16YeR5bGe55qE6YeN6YeP44CC"),
                 ],
                 [
-                    "【J3】看起来是对电脑中连接传输配件作整理，",
-                    "实际上是一种铁道类型，",
-                    "专用于列车转场或折返。"
+                    decodeBase64("44CQSjPjgJHnnIvotbfmnaXmmK/lr7nnlLXohJHkuK3ov57mjqXkvKDovpPphY3ku7bkvZzmlbTnkIbvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5piv5LiA56eN6ZOB6YGT57G75Z6L77yM"),
+                    decodeBase64("5LiT55So5LqO5YiX6L2m6L2s5Zy65oiW5oqY6L+U44CC"),
                 ],
                 [
-                    "【J3】看起来是描述正在减省电力资源的耗用，",
-                    "实际上是一个古代官职，",
-                    "是受有旌节的军事将领。"
+                    decodeBase64("44CQSjPjgJHnnIvotbfmnaXmmK/mraPlnKjlh4/nnIHnlKjnlLXorqHph4/ljZXkvY3nmoTogJfnlKjvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5piv5LiA5Liq5Y+k5Luj5a6Y6IGM77yM"),
+                    decodeBase64("5piv5Y+X5pyJ5peM6IqC55qE5Yab5LqL5bCG6aKG44CC"),
                 ],
                 [
-                    "【Q3】看起来是说讨论组正飞快转动脑筋思考，",
-                    "实际上有关于振动与波，",
-                    "刻画了波包传播的快慢。"
+                    decodeBase64("44CQUTPjgJHnnIvotbfmnaXmmK/or7Torqjorrrnu4TmraPpo57lv6vovazliqjohJHnrYvmgJ3ogIPvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5pyJ5YWz5LqO5oyv5Yqo5LiO5rOi77yM"),
+                    decodeBase64("5Yi755S75LqG5rOi5YyF5Lyg5pKt55qE5b+r5oWi44CC"),
                 ],
                 [
-                    "【Q3】看起来是一棵圣诞杉只有正面挂了装饰，",
-                    "实际上是一种数据结构，",
-                    "可用于存储检索字符串。"
+                    decodeBase64("44CQUTPjgJHnnIvotbfmnaXmmK/kuIDmo7XlnKPor57mnYnlj6rmnInmraPpnaLmjILkuoboo4XppbDvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5piv5LiA56eN5pWw5o2u57uT5p6E77yM"),
+                    decodeBase64("5Y+v55So5LqO5a2Y5YKo5qOA57Si5a2X56ym5Liy44CC"),
                 ],
                 [
-                    "【Q4】看起来指530万—260万年前的地质时代，",
-                    "实际上是一首日语歌曲，",
-                    "为某新海诚电影主题曲。"
+                    decodeBase64("44CQUTTjgJHnnIvotbfmnaXmjIc1MzDkuIfigJQyNjDkuIflubTliY3nmoTlnLDotKjml7bku6PvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5piv5LiA6aaW5pel6K+t5q2M5puy77yM"),
+                    decodeBase64("5Li65p+Q5paw5rW36K+a55S15b2x5Li76aKY5puy44CC"),
                 ],
                 [
-                    "【S4】看起来是处死耶稣与左右两强盗的刑具，",
-                    "实际上是一颗南天亮星，",
-                    "亮度于全天排名第20位。"
+                    decodeBase64("44CQUzTjgJHnnIvotbfmnaXmmK/lpITmrbvogLbnqKPkuI7lt6blj7PkuKTlvLrnm5fnmoTliJHlhbfvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5piv5LiA6aKX5Y2X5aSp5Lqu5pif77yM"),
+                    decodeBase64("5Lqu5bqm5LqO5YWo5aSp5o6S5ZCN56ysMjDkvY3jgII="),
                 ],
                 [
-                    "【S4】看起来在请求快来祓除拯救闹鬼的地带，",
-                    "实际上是一项竞赛项目，",
-                    "需以最短时间还原魔方。"
+                    decodeBase64("44CQUzTjgJHnnIvotbfmnaXlnKjor7fmsYLlv6vmnaXnpZPpmaTmi6/mlZHpl7nprLznmoTlnLDluKbvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5piv5LiA6aG556ue6LWb6aG555uu77yM"),
+                    decodeBase64("6ZyA5Lul5pyA55+t5pe26Ze06L+Y5Y6f6a2U5pa544CC"),
                 ],
                 [
-                    "【W3】看起来这么多响叮当的乐器一定会很吵，",
-                    "实际上是一家载具厂商，",
-                    "主要生产货车、巴士等。"
+                    decodeBase64("44CQVzPjgJHnnIvotbfmnaXov5nkuYjlpJrlk43lj67lvZPnmoTkuZDlmajkuIDlrprkvJrlvojlkLXvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5piv5LiA5a626L295YW35Y6C5ZWG77yM"),
+                    decodeBase64("5Li76KaB55Sf5Lqn6LSn6L2m44CB5be05aOr562J44CC"),
                 ],
                 [
-                    "【X3】看起来是形容从后面慢吞吞地一路进发，",
-                    "实际上是我国的军事家，",
-                    "为新中国十大元帅之一。"
+                    decodeBase64("44CQWDPjgJHnnIvotbfmnaXmmK/lvaLlrrnku47lkI7pnaLmhaLlkJ7lkJ7lnLDkuIDot6/ov5vlj5HvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5piv5oiR5Zu955qE5Yab5LqL5a6277yM"),
+                    decodeBase64("5Li65paw5Lit5Zu95Y2B5aSn5YWD5biF5LmL5LiA44CC"),
                 ],
                 [
-                    "【X4】看起来是说自动体外除颤器的生产加工，",
-                    "实际上是网络通信技术，",
-                    "通过定期发包确认在线。"
+                    decodeBase64("44CQWDTjgJHnnIvotbfmnaXmmK/or7Toh6rliqjkvZPlpJbpmaTpoqTlmajnmoTnlJ/kuqfliqDlt6XvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5piv572R57uc6YCa5L+h5oqA5pyv77yM"),
+                    decodeBase64("6YCa6L+H5a6a5pyf5Y+R5YyF56Gu6K6k5Zyo57q/44CC"),
                 ],
                 [
-                    "【Y2】看起来是说这颗卫星的年龄已经很大了，",
-                    "实际上是一个社会职业，",
-                    "以传说人物来指代媒人。"
+                    decodeBase64("44CQWTLjgJHnnIvotbfmnaXmmK/or7Tov5npopfljavmmJ/nmoTlubTpvoTlt7Lnu4/lvojlpKfkuobvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5piv5LiA5Liq56S+5Lya6IGM5Lia77yM"),
+                    decodeBase64("5Lul5Lyg6K+05Lq654mp5p2l5oyH5Luj5aqS5Lq644CC"),
                 ],
                 [
-                    "【Z3】看起来是独酌时一个人饮尽了若干杯酒，",
-                    "实际上曾是一网络热词，",
-                    "指自发弘扬爱国的群体。"
+                    decodeBase64("44CQWjPjgJHnnIvotbfmnaXmmK/kuo7ni6zphYzml7bkuIDkuKrkurrppa7lsL3kuobmlbDmna/phZLvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5pu+5piv5LiA572R57uc54Ot6K+N77yM"),
+                    decodeBase64("5oyH6Ieq5Y+R5byY5oms54ix5Zu955qE576k5L2T44CC"),
                 ],
                 [
-                    "【Z3】看起来形容雌雄同株、同花授粉的植物，",
-                    "实际上是一传播学名词，",
-                    "是平民化的网络新媒体。"
+                    decodeBase64("44CQWjPjgJHnnIvotbfmnaXlvaLlrrnpm4zpm4TlkIzmoKrjgIHlkIzoirHmjojnsonnmoTmpI3nianvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5piv5LiA5Lyg5pKt5a2m5ZCN6K+N77yM"),
+                    decodeBase64("5piv5bmz5rCR5YyW55qE572R57uc5paw5aqS5L2T44CC"),
                 ],
                 [
-                    "【Z3】看起来是说曹操之子建立了崇高的操守，",
-                    "实际上是一个主题节日，",
-                    "设于每年的三月十二日。"
-                ]
+                    decodeBase64("44CQWjPjgJHnnIvotbfmnaXmmK/or7Tmm7nmk43kuYvlrZDlu7rnq4vkuobltIfpq5jnmoTmk43lrojvvIw="),
+                    decodeBase64("5a6e6ZmF5LiK5piv5LiA5Liq5Li76aKY6IqC5pel77yM"),
+                    decodeBase64("6K6+5LqO5q+P5bm055qE5LiJ5pyI5Y2B5LqM5pel44CC"),
+                ],
             ];
 
             // cost for A and B
